@@ -1,0 +1,361 @@
+---
+index: 6
+title: Auto-generate reference docs from OpenAPI/Swagger specs
+description: This guides shows how to create beautiful API reference docs from OpenAPI/Swagger specs.
+date: "2022-10-02"
+---
+
+import { Bleed } from '@components/ui/bleed'
+import { TwoOfThreeCols } from '@components/ui/gridcolspans'
+import { OpenAPIDoc } from '@components/ui/openapidoc'
+import { Note } from '@components/ui/note'
+
+<TwoOfThreeCols>
+
+The [OpenAPI Initiative](https://www.openapis.org/) aims to standardize API specifications to make it easier to share and maintain HTTP-based APIs. This standardization also makes it easy to automatically generate documentation for your endpoints.
+
+## The component
+
+We will start by building a generic React component for displaying the API information for our endpoint:
+
+<Bleed>
+  <div className="bg-white">
+    <OpenAPIDoc
+      url="https://petstore.swagger.io/v2/swagger.json"
+      path="/pet/findByStatus"
+      method="GET" />
+  </div>
+</Bleed>
+
+<Note type="info">This component is already part of the [Highway Docs](https://motif.land/community/sites/402226441792160481) and [Ribbon Docs](https://motif.land/community/sites/963658517571026637) templates.</Note>
+
+The full code for the component is as follows:
+
+</TwoOfThreeCols>
+
+```jsx
+// File: /components/httpapidoc.mdx
+
+import { useState } from "react"
+import cn from "classnames"
+
+export const ChevronRight = ({ className }) => <svg className={className} viewBox="0 0 20 20" fill="currentColor">
+  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+</svg>
+
+export const HTTPResponseCodes = {
+  100: "Continue",
+  101: "Switching Protocols",
+  102: "Processing (WebDAV)",
+  103: "Early Hints",
+  200: "OK",
+  201: "Created",
+  202: "Accepted",
+  203: "Non-Authoritative Information",
+  204: "No Content",
+  205: "Reset Content",
+  206: "Partial Content",
+  207: "Multi-Status (WebDAV)",
+  208: "Already Reported (WebDAV)",
+  226: "IM Used (HTTP Delta encoding)",
+  300: "Multiple Choices",
+  301: "Moved Permanently",
+  302: "Found",
+  303: "See Other",
+  304: "Not Modified",
+  305: "Use Proxy Deprecated",
+  306: "unused",
+  307: "Temporary Redirect",
+  308: "Permanent Redirect",
+  400: "Bad Request",
+  401: "Unauthorized",
+  402: "Payment Required Experimental",
+  403: "Forbidden",
+  404: "Not Found",
+  405: "Method Not Allowed",
+  406: "Not Acceptable",
+  407: "Proxy Authentication Required",
+  408: "Request Timeout",
+  409: "Conflict",
+  410: "Gone",
+  411: "Length Required",
+  412: "Precondition Failed",
+  413: "Payload Too Large",
+  414: "URI Too Long",
+  415: "Unsupported Media Type",
+  416: "Range Not Satisfiable",
+  417: "Expectation Failed",
+  418: "I'm a teapot",
+  421: "Misdirected Request",
+  422: "Unprocessable Entity (WebDAV)",
+  423: "Locked (WebDAV)",
+  424: "Failed Dependency (WebDAV)",
+  425: "Too Early Experimental",
+  426: "Upgrade Required",
+  428: "Precondition Required",
+  429: "Too Many Requests",
+  431: "Request Header Fields Too Large",
+  451: "Unavailable For Legal Reasons",
+  500: "Internal Server Error",
+  501: "Not Implemented",
+  502: "Bad Gateway",
+  503: "Service Unavailable",
+  504: "Gateway Timeout",
+  505: "HTTP Version Not Supported",
+  506: "Variant Also Negotiates",
+  507: "Insufficient Storage (WebDAV)",
+  508: "Loop Detected (WebDAV)",
+  510: "Not Extended",
+  511: "Network Authentication Require:",
+};
+
+export const getColorClassName = (method) => {
+  switch (method) {
+    case "GET": return "bg-green-100 text-green-600"
+    case "HEAD": return "bg-fuchsia-100 text-fuchsia-600"
+    case "POST": return "bg-sky-100 text-sky-600"
+    case "PUT": return "bg-amber-100 text-amber-600"
+    case "DELETE": return "bg-rose-100 text-rose-600"
+    case "CONNECT": return "bg-violet-100 text-violet-600"
+    case "OPTIONS": return "bg-neutral-100 text-neutral-600"
+    case "TRACE": return "bg-indigo-100 text-indigo-600"
+    case "PATCH": return "bg-orange-100 text-orange-600"
+  }
+}
+
+export const getResponseColorClassName = (code) => {
+  if (code < 300) {
+    return "bg-green-500"
+  } else if (code < 400) {
+    return "bg-orange-500"
+  } else {
+    return "bg-rose-500"
+  }
+}
+
+export const ResponseTag = ({ code }) => {
+  return <div className="not-prose flex flex-row gap-2 items-center">
+      <div className={`${getResponseColorClassName(code)} rounded-full w-2 h-2`}/>
+      <p className="font-medium">{code}: {HTTPResponseCodes[code]}</p>
+    </div>
+}
+
+export const Badge = ({ method }) => {
+  return <span className={`${getColorClassName(method)} font-medium rounded-full px-2 py-1 text-xs w-min select-none`}>{ method }</span>
+}
+
+export const ParamsTable = ({ params }) => {
+  return <table className="w-full text-sm table-auto prose border-collapse min-w-full m-0">
+      { params.map(p => {
+        return <tr className="border-b border-neutral-100">
+            <td className="w-48 py-2 font-mono">
+              {p.name}{p.required && <span className="text-rose-500 text-xs ml-0.5 transform -translate-y-1 inline-block select-none">*</span>}
+            </td>
+            <td className="w-48 py-2">
+              {p.type}
+            </td>
+            <td className="py-2">
+              {p.description}
+            </td>
+          </tr>
+      })}
+    </table>
+}
+
+export const RevealButton = ({ open, className, onClick }) => {
+  return <div onClick={onClick} className={`${className} p-1 rounded-md hover:bg-neutral-100 transition cursor-pointer`}><ChevronRight className={cn(
+      "w-6 h-6 text-neutral-600 transform transition", {
+        "rotate-0": !open,
+        "rotate-90": open,
+      }
+    )} /></div>
+}
+
+export const HTTPAPIDoc = ({ method, baseUrl, path, description, parameters, responses }) => {
+  const [isOpen, setOpen] = useState(false)
+  const queryParams = parameters?.filter(p => p.in === "query")
+  const pathParams = parameters?.filter(p => p.in === "path")
+  const formDataParams = parameters?.filter(p => p.in === "formData")
+  const bodyParams = parameters?.filter(p => p.in === "body")
+
+  return <div className="pl-12 pr-6 pt-4 pb-4 rounded-md border border-neutral-200 flex flex-col gap-2 overflow-hidden">
+    <div className="relative flex flex-row gap-4 items-center m-0 not-prose">
+      <RevealButton
+        className="absolute left-[-38px]"
+        open={isOpen}
+        onClick={() => setOpen(o => !o)}
+      />
+      <Badge method={method} />
+      <p className="text-sm"><span className="text-neutral-400">{baseUrl || ''}</span><span className="font-medium text-neutral-900">{path || ''}</span>
+      </p>
+    </div>
+    <p className="m-0 p-0 mt-2">{description}</p>
+    { isOpen && <>
+      {(parameters?.length > 0) &&
+        <div>
+          <p className="font-semibold mt-4">Parameters</p>
+          {queryParams?.length > 0 && <>
+              <p className="font-semibold mt-10 text-sm">Query</p>
+              <ParamsTable params={queryParams} />
+            </>
+          }
+          {pathParams?.length > 0 && <>
+              <p className="font-semibold mt-10 text-sm">Path</p>
+              <ParamsTable params={pathParams} />
+            </>
+          }
+          {bodyParams?.length > 0 && <>
+              <p className="font-semibold mt-10 text-sm">Body</p>
+              <ParamsTable params={bodyParams} />
+            </>
+          }
+          {formDataParams?.length > 0 && <>
+              <p className="font-semibold mt-10 text-sm">Form data</p>
+              <ParamsTable params={formDataParams} />
+            </>
+          }
+        </div>
+      }
+      {Object.keys(responses)?.length > 0 &&
+        <>
+          <p className="font-semibold mt-4 m-0 p-0">Responses</p>
+          <table className="w-full text-sm table-auto prose border-collapse min-w-full m-0">
+            { Object.keys(responses).map(code => {
+              return <tr className="border-b border-neutral-100">
+                  <td className="w-48 py-2"><ResponseTag code={code}/></td>
+                  <td className="py-2">{responses[code]?.description}</td>
+                </tr>
+            })}
+          </table>
+        </>
+      }
+      </>
+    }
+  </div>
+}
+```
+
+<TwoOfThreeCols>
+
+## Integrating with an OpenAPI/Swagger spec
+
+Next, we will load a spec from a remote source, and pass the relevant info on to our React component.
+
+</TwoOfThreeCols>
+
+```jsx
+// File: /components/openapidoc.mdx
+
+import { useEffect, useState } from "react"
+import { HTTPAPIDoc } from "@components/httpapidoc"
+
+export const OpenAPIDoc = ({ url, path, method }) => {
+  const [spec, setSpec] = useState(undefined)
+  
+  useEffect(() => {
+    if (!url || !path) {
+      return
+    }
+    const run = async () => {
+      const response = await fetch(url)
+      const result = await response.json()
+      if (!result) {
+        return
+      }
+      
+      const baseUrl = `${result.schemes?.[0]}://${result.host}${result.basePath}`
+      const spec = result.paths?.[path]?.[method.toLowerCase()]
+      if (!spec) {
+        return
+      }
+      setSpec({
+        baseUrl,
+        description: spec?.summary || spec?.description,
+        parameters: spec?.parameters,
+        responses: spec?.responses || {},
+      })
+    }
+    run()
+  }, [url, path])
+
+  return <HTTPAPIDoc
+    method={method}
+    baseUrl={spec?.baseUrl}
+    path={path}
+    description={spec?.description}
+    parameters={spec?.parameters}
+    responses={spec?.responses} />
+}
+```
+
+<TwoOfThreeCols>
+
+Our OpenAPI component is now ready to be used within our pages as follows:
+
+```jsx
+import { OpenAPIDoc } from "@components/openapidoc"
+
+<OpenAPIDoc
+  url="https://petstore.swagger.io/v2/swagger.json"
+  path="/pet/{petId}/uploadImage"
+  method="POST" />
+```
+
+## Bonus: integrate in a Markdoc project
+
+In order to use this component in a Markdoc project, let's add it to our [Markdoc config](https://markdoc.dev/docs/syntax#config). First, let's import the component, in `markdoc.components.js`:
+
+```js
+import { OpenAPIDoc } from '@components/openapidoc'
+
+export default {
+  // ...
+  OpenAPIDoc
+}
+```
+
+Next, let's declare its schema, in `markdoc.config.js`:
+
+```js
+const config = {
+  // ...
+  tags: {
+    // ...
+    openapidoc: {
+      render: 'OpenAPIDoc',
+      description: 'An Open API Doc card',
+      attributes: {
+        url: { type: String },
+        path: { type: String },
+        method: {
+          type: String,
+          default: 'GET',
+          matches: [
+            'GET',
+            'HEAD',
+            'POST',
+            'PUT',
+            'DELETE',
+            'CONNECT',
+            'OPTIONS',
+            'TRACE',
+            'PATCH',
+          ],
+        },
+      },
+    },
+}
+
+export default config
+```
+
+We are now ready to use it within our Markdoc pages, as follows
+
+```md
+{% openapidoc
+  url="https://petstore.swagger.io/v2/swagger.json"
+  path="/pet/{petId}/uploadImage"
+  method="POST"
+/%}
+```
+</TwoOfThreeCols>

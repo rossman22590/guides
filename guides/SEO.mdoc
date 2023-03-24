@@ -1,0 +1,98 @@
+---
+index: 2
+title: Preparing for SEO
+description: This guide walks you through the steps to complete to make sure your site performs well on SEO.
+date: "2022-06-05"
+---
+
+{% twocols %}
+
+SEO stands for _Search Engine Optimization_, and is a set of rules and best practices to make your content discoverable by search engines. Search engines, such as Google, look for hints in your page to better index your content. This can be the content itself, your page's title, but also special tags in the HTML page such as a description or an image. Recently, search engines have also started to rank results according to loading speed, accessibility and other factors — the more your page adheres to best practices, the more the search engine will want to bump it up in the results.
+
+## Open Graph metadata
+
+One of the first things the search engine looks for is your page's Open Graph (OG) tags. These tags hold information such as your page's title, a description, an image, or a Twitter handle.
+
+```html
+<meta property="og:url" content="https://yourdomain.com" />
+<meta property="og:title" content="Welcome to my page" />
+<meta property="og:description" content="Metadata is fun!" />
+<meta property="og:image" content="https://res.cloudinary.com/djp21wtxm/image/upload/c_limit,w_800/v1606389990/te9lnivi10ioe25lryhf.jpg" />
+<meta property="twitter:handle" content="@motifland" />
+```
+
+### Site-wide configuration
+
+To specify OG tags that should be included on all your pages, head over to the Motif configuration file (to access it, open search using {% keys cmd=true char="P" /%} and type `motif.json`). Locate the `head` section, and add a line for each meta tag you want to add. For instance:
+
+```json
+{
+  "head": [
+    "<meta property='og:title' content='My page title' />",
+    "<meta property='og:description' content='My page description' />",
+    "<meta property='og:image' content='https://res.cloudinary.com/djp21wtxm/image/upload/c_limit,w_800/v1606389990/te9lnivi10ioe25lryhf.jpg' />",
+    "<meta property='twitter:handle' content='@motifland' />",
+    "..."
+  ]
+}
+```
+
+### Page-specific configuration
+
+OG metadata can also be set for individual pages. For instance, if you have a blog post, you may want the OG title to match the title of your blog post, or have the OG image match the blog post's cover image. For page-specific OG metadata, simply set it in the page's metadata. You can do it either by exporting a JSON object named `meta`, and include a `meta` key in it:
+
+```js
+export const meta = {
+  meta: {
+    "og:title": "My blog post",
+    "og:description": "A description",
+    "og:image":
+      "https://res.cloudinary.com/djp21wtxm/image/upload/v1625134038/o7wehrw9bqi6tszmb0xm.svg",
+  },
+}
+```
+
+or using YAML syntax:
+
+```yaml
+---
+meta:
+  "og:title": "My blog post",
+  "og:description": "A description",
+  "og:image": "https://res.cloudinary.com/djp21wtxm/image/upload/v1625134038/o7wehrw9bqi6tszmb0xm.svg"
+---
+```
+
+Note that in case you are using YAML syntax, the section delimited by `---` needs to be placed at the very top of your page, before any further content.
+
+## Title format
+
+If the `meta` of your page contains a `title` key, e.g.
+
+```yaml
+---
+title: My page title
+---
+```
+
+this is what will be used for the published page title. If it is not present, it will look for a `title` entry in your [Motif configuration](/docs/configuration/motif-config):
+
+```json
+{
+  title: "Default title"
+}
+```
+
+If none of these are set, the file name will be used.
+
+You may also specify a title template, for instance to automatically append your website's name to all your page titles. This is done by adding a `titleTemplate` entry to your [Motif configuration](/docs/configuration/motif-config):
+
+```json
+{
+  titleTemplate: "%s - My website"
+}
+```
+
+The `%s` part is replaced by your individual page's title.
+
+{% /twocols %}

@@ -1,0 +1,368 @@
+---
+index: 2
+title: Deploy as a Next.js app
+description: Deploy your Motif project as a custom Next.js app that you can run on your own servers.
+date: "2022-08-31"
+---
+
+{% twocols %}
+
+With the introduction of [file sync](/blog/syncing-text-files-using-yjs-and-the-file-system-access-api), projects created in Motif can be synced with a folder on disk. And since a project consists only in plain text files (such as [MDX](/docs/basics/mdx), [Markdoc](/docs/basics/mdx) or TypeScript), with no proprietary data attached, it's straightforward to deploy your project with your own custom setup. Here, we'll guide you through how to deploy your project as a Next.js app.
+
+## Prerequisites
+
+Before syncing your project on disk, you might need to do the following tweaks to make sure it runs straight away with the local Next.js runtime:
+
+- Next.js is case-insensitive, and matches query paths with lowercase filenames in the `pages` folder. So make sure that your page files have lowercase names.
+- Following ES module standards, make sure that all your internal import statements explicitly include file extensions. So instead of
+  ```js
+  import { Navbar } from "@components/navbar"
+  ```
+  you should have
+  ```js
+  import { Navbar } from "@components/navbar.tsx"
+  ```
+
+{% /twocols %}
+
+{% threecolsstickyright %}
+
+## Write your project to disk
+
+Head over to your project settings {% keys cmd=true char="," /%}, go to the Sync tab, select your destination folder, and hit the "Write to disk" button.
+
+{% button variant="secondary" size="sm" %}Write to disk{% /button %}
+
+Your folder structure on disk should look similar to the one depicted here.
+
+In this guide, we will create a Next.js app at the root of your Motif project tree, but you can change this setup to suit your needs, for instance by having all Motif content in a separate folder. You might need to tweak your [Next.js config](https://nextjs.org/docs/api-reference/next.config.js/introduction) for this, or leverage [Middleware](https://nextjs.org/docs/advanced-features/middleware).
+
+{% samplefiletree sample="local" /%}
+
+{% /threecolsstickyright %}
+
+{% twocols %}
+
+## Install dependencies
+
+If you are starting a new Next.js app, install the following dependencies:
+
+```bash
+npm install next react react-dom remark-frontmatter remark-mdx-frontmatter @mdx-js/loader @mdx-js/mdx @mdx-js/react @next/mdx
+npm install -D @types/node @types/react @tailwindcss/typography @types/fast-levenshtein @types/minimatch autoprefixer fast-levenshtein glob gray-matter minimatch postcss simple-functional-loader tailwindcss typescript webpack
+```
+
+Open `package.json` and add the following:
+
+```json
+{
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  }
+}
+```
+
+## Setup Next.js
+
+Create a file named `next.config.js` at the root of your project, and add the following:
+
+{% /twocols %}
+
+```js
+import remarkFrontmatter from 'remark-frontmatter'
+import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
+import { createLoader } from 'simple-functional-loader'
+import path from 'path'
+import fs from 'fs'
+import matter from 'gray-matter'
+
+const buildTree = (dir, parentName = 'pages') => {
+  const result = {}
+  const list = fs.readdirSync(dir)
+  result.name = parentName
+  for (const item of list) {
+    if (item.startsWith('_app.')) {
+      continue
+    }
+    const itemPath = path.join(dir, item)
+    const stats = fs.statSync(itemPath)
+    if (stats.isDirectory()) {
+      result.folders = [...(result.folders || []), buildTree(itemPath, item)]
+    } else {
+      const frontmatter = matter(
+        fs.readFileSync(itemPath, { encoding: 'utf-8' })
+      )
+      const p = path
+        .join(
+          path.dirname(itemPath),
+          path.basename(itemPath, path.extname(itemPath))
+        )
+        .replace(/^pages/, '')
+        .replace(/\/index$/, '')
+      result.files = [
+        ...(result.files || []),
+        {
+          name: item,
+          path: p,
+          meta: frontmatter.data,
+        },
+      ]
+    }
+  }
+  return result
+}
+
+export default {
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
+  resolve: {
+    extensions: ['.mdx', '.md', '...'],
+  },
+  webpack(config, options) {
+    const files = buildTree('./pages')
+
+    config.module.rules.push({
+      test: { and: [/\.mdx$/] },
+      use: [
+        options.defaultLoaders.babel,
+        createLoader(function (source) {
+          // If source already had an explicitly defined `meta`
+          // (caught and transformed into `__motif_meta__` in the
+          // previous loader), this will take precedence, and
+          // the one extracted from the frontmatter will be ignored.
+          if (/export\s+(const|let|var)\s+__motif_meta__\s*=/.test(source)) {
+            source = source
+              .replace(
+                /export\s+(const|let|var)\s+meta\s*=/,
+                'export $1 __motif_frontmatter__ ='
+              )
+              .replace(
+                /export\s+(const|let|var)\s+__motif_meta__\s*=\s*{/,
+                'export $1 meta = {\n  ...__motif_frontmatter__,'
+              )
+          }
+          const pathSegments = this.resourcePath.split(path.sep)
+          const filename = pathSegments.slice(-1)[0]
+          return `${source}
+MDXContent.meta=meta
+MDXContent.filename="${filename}"
+MDXContent.files=${JSON.stringify(files)}`
+        }),
+        {
+          loader: '@mdx-js/loader',
+          options: {
+            providerImportSource: '@mdx-js/react',
+            remarkPlugins: [
+              remarkFrontmatter,
+              [remarkMdxFrontmatter, { name: 'meta' }],
+            ],
+            rehypePlugins: [],
+          },
+        },
+        createLoader(function (source) {
+          return source.replace(
+            /export\s+(const|let|var)\s+meta\s*=/,
+            'export $1 __motif_meta__ ='
+          )
+        }),
+      ],
+    })
+
+    return config
+  },
+}
+```
+
+{% twocols %}
+
+This configuration sets up the required steps to:
+
+- Transpile your MDX pages,
+- Extract the frontmatter,
+- Pass them to the templates, alongside the filename, path, and project file tree.
+
+## Setup Tailwind
+
+At the root of your project, create a file named `postcss.config.cjs`, and add the following:
+
+```js
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+```
+
+By default, your Motif project already contains a [Tailwind configuration](https://tailwindcss.com/docs/configuration). Here, in addition to the Motif config, we need to tell Tailwind what files too look for when compiling the CSS. In `tailwind.config.js`, add the following `content` entry (you may include as many paths as you need):
+
+```js
+module.exports = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./templates/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  ...
+}
+```
+
+## Setup a custom `App`
+
+In order to enable templates and custom components, we need to create a [custom Next.js `App`](https://nextjs.org/docs/advanced-features/custom-app). In the `pages` folder, create a file named `_app.tsx`, and add the code below. Here is an example that wraps your MDX pages inside templates (`blog` or `plain`, depending on how it is setup in `motif.json`), and transforms regular links and images to their Next.js optimized versions, `next/link` and `next/image`.
+
+{% note %}You will need to update the `getTemplate` function if you are using other template names.{% /note %}
+
+{% /twocols %}
+
+```tsx
+import '/styles/main.css'
+
+import { AppProps } from 'next/app'
+import motifConfig from '/motif.json'
+import dynamic from 'next/dynamic'
+import fastLevenshtein from 'fast-levenshtein'
+import minimatch from 'minimatch'
+import { MDXProvider } from '@mdx-js/react'
+import Link from 'next/link'
+import Image from 'next/image'
+
+export const getBestGlobMatch = (
+  globs: string[],
+  path: string
+): string | undefined => {
+  const match = globs
+    .filter((p) => minimatch(path, p))
+    .sort((m1, m2) => {
+      const d1 = fastLevenshtein.get(m1, path)
+      const d2 = fastLevenshtein.get(m2, path)
+      return d1 < d2 ? -1 : 1
+    })?.[0]
+
+  if (match === undefined && globs.includes('**/*')) {
+    return '**/*'
+  }
+  return match
+}
+
+const getTemplateId = (pathname: string) => {
+  const templateMappings = (motifConfig.templates as { [k: string]: string }) || {}
+  const path = pathname === '/' ? '' : pathname?.replace(/^\//, '')
+  const matchingGlob = getBestGlobMatch(Object.keys(templateMappings), path)
+  return matchingGlob && templateMappings[matchingGlob]
+}
+
+const getTemplate = (pathname: string) => {
+  switch (getTemplateId(pathname)) {
+    // Add other template mappings here
+    case 'blog':
+      return dynamic(() =>
+        import('@templates/blog.mdx').then((mod) => mod.Template)
+      )
+    default:
+      return dynamic(() =>
+        import('@templates/plain.mdx').then((mod) => mod.Template)
+      )
+  }
+}
+
+const components = {
+  a: ({ href, ...props }: { href: string }) => <Link href={href}> <a {...props} /></Link>,
+  img: ({ src, alt, ...props }: { src: string; alt: string }) => <Image alt={alt} src={src} layout="responsive" {...props} />
+}
+
+
+function MyApp({ Component, pageProps, router }: AppProps) {
+  const Template = getTemplate(router.pathname)
+
+  const meta = (Component as any).meta || {}
+  const filename = (Component as any).filename || {}
+  const files = (Component as any).files || {}
+
+  return (
+    <MDXProvider components={components}>
+      <Template
+        meta={meta}
+        path={router.pathname}
+        filename={filename}
+        files={files}
+      >
+        <Component {...pageProps} />
+      </Template>
+    </MDXProvider>
+  )
+}
+
+export default MyApp
+```
+
+{% twocols %}
+
+## Install Motif-imported packages
+
+In Motif, you can import packages from the web with a single import statement, without any preliminary install step:
+
+```js
+import confetti from "canvas-confetti"
+```
+
+Such a statement will look up `canvas-confetti` on [Skypack](https://www.skypack.dev/), and automatically include it in your pages. You can also provide explicit URLs:
+
+```js
+import confetti from "https://cdn.skypack.dev/canvas-confetti"
+```
+
+Next.js has [experimental support](https://nextjs.org/docs/api-reference/next.config.js/url-imports) for such import statements, but it requires some extra setup, which we won't go through here. Instead, let's go the conventional way and import these packages using NPM:
+
+```sh
+npm install canvas-confetti
+```
+
+## Setup `tsconfig.json`
+
+In order for the Next.js app to understand internal imports such as
+
+```js
+import Navbar from "@components/navbar"
+```
+
+we need to setup a custom `tsconfig.json` at the root of your project. Here is a sample configuration (you may need to adapt it to suit your specific setup):
+
+```json
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@templates/*": ["templates/*"],
+      "@components/*": ["components/*"],
+      "@lib/*": ["lib/*"]
+    }
+  },
+  "exclude": ["../../node_modules", "./node_modules"],
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ]
+}
+
+```
+
+## Running the app
+
+We are ready to run the app locally:
+
+```sh
+npm run dev
+```
+
+You now have a custom Next.js app ready to be deployed to your own servers. You can continue editing your content on Motif and benefit from the rich collaborative authoring environment it offers, and sync it to your local folder, thereby preserving your existing custom app setup and deployment workflows.
+
+{% /twocols %}

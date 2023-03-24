@@ -1,0 +1,90 @@
+---
+index: 10
+title: Add Intercom chat to your website
+description: Add the Intercom chat widget to a set of pages.
+date: "2023-01-17"
+---
+
+import { TwoOfThreeCols} from "@components/ui/GridColSpans"
+import { Bleed} from "@components/ui/bleed"
+
+## Step 1: obtain the embed code
+
+<TwoOfThreeCols>
+Head over to your Intercom account, select the main tab and open the "Add chat to your website" section. Select "With code", and choose "Single-page apps" from the dropdown:
+</TwoOfThreeCols>
+
+<Bleed>
+<img className="rounded-md border" src="https://res.cloudinary.com/djp21wtxm/image/upload/v1673993409/i1600x1491-nuE1FAx5orHZ_ewdrx3.png" alt="" />
+</Bleed>
+
+## Step 2: update your `<head>`
+
+<TwoOfThreeCols>
+Copy the head embed code. That's the first code snippet, starting with `<script>`. Open `motif.json`, and paste the code into the head section. Remove the line breaks, and replace the inner double-quotes `"` with single quotes `'`. Your `motif.json` config file should look like this (make sure to update `INTERCOMP_APP_ID` with your app ID):
+
+```json
+{
+  "titleTemplate": "%s - Acme",
+  "templates": {
+    "**/*": "base",
+    "guides/**/*": "guides"
+  },
+  "head": [
+    "<script>(function(){var w=window;var ic=w.Intercom;if(typeof ic==='function'){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/INTERCOMP_APP_ID';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();</script>"
+  ]
+}
+```
+
+## Step 3: create the Intercom component
+
+Start by copying the second snippet from the Intercom settings, the one starting with `window.Intercom`. We need to make a slight tweak to the snippet in order for it to work. Indeed, the Intercom code calls `window`, which is only available client-side. Motif, on the other hand, pre-renders your pages on the server in order to make them performant and SEO-optimized. Including code calling `window` would make this pre-render process fail. The "trick" is to wrap the code in a component and a `useEffect` hook to ensure it only gets called on the client.
+
+Let's create a file named `Intercom.mdx` in the `/components` folder, and paste the following code:
+
+```jsx
+import { useEffect } from "react"
+
+export const Intercom = () => {
+  useEffect(() => {
+    if (!('Intercom' in window)) {
+      return
+    }
+    {/* Intercom snippet start */}
+    window.Intercom("boot", {
+      api_base: "https://api-iam.intercom.io",
+      app_id: "INTERCOMP_APP_ID"
+    });
+    {/* Intercom snippet end */}
+  }, [])
+
+  return <></>
+}
+```
+
+The `window.Itercom` part should be identical to the snippet copied above. As with the head entry, make sure to update `INTERCOMP_APP_ID`.
+
+
+## Step 4: update your template
+
+Now, let's add the Intercom component we just created to a template. This allows us to automatically include the Intercom widget in a set of pages, for instance all our docs pages, without duplicating any code.
+
+Open a template from the `/templates` folder, and change the code to include the Intercom component:
+
+```jsx
+import { Intercom } from "@components/intercom"
+
+export const Template = ({ children }) => {
+  return (
+    <div className="p-6 sm:px-8 pb-32 mx-auto max-w-screen-md antialiased prose">
+      {children}
+      <Intercom />
+    </div>
+  )
+}
+
+```
+
+Now, all pages using this template will display the Intercom widget!
+
+</TwoOfThreeCols>

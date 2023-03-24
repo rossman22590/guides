@@ -1,0 +1,485 @@
+---
+index: 1
+title: "Add search to your docs site"
+description: This guide covers how to build a fast, zero-dependency fuzzy-search component for your docs site.
+date: "2022-08-22"
+authors:
+  - name: "Michael Fester"
+    twitter: "michaelfester"
+    avatarUrl: "https://res.cloudinary.com/djp21wtxm/image/upload/v1651630007/Me_uyndrz.jpg"
+---
+
+import { Bleed } from "@components/ui/bleed"
+import { Keys } from "@components/ui/keys"
+import { Search as SearchIcon } from "@components/icons/search"
+import { SearchResults } from "@components/common/search"
+import { ThreeColsStickyRight, TwoOfThreeCols } from "@components/ui/gridcolspans"
+import { SampleFileTree } from "@components/common/filetree/samples"
+
+<TwoOfThreeCols>
+
+When building documentation sites, search is an essential part of the user experience. It needs to be fast, tolerant to typos, and always up to date. Thanks to support for [ES module imports](/docs/basics/es-modules) in Motif, it's easy to include state-of-the-art search libraries and leverage these in your pages. Let's see how.
+
+## Overview
+
+In this guide, we'll be using [Fuse.js](https://fusejs.io/), which is a lightweight, fuzzy-search library that works client-side with zero dependencies. It works by passing it a list of entries (JavaScript objects), and corresponding keys to index. 
+This process happens on-the-fly, and will trigger at each page/site update. There is no extra setup step involved, and no reliance on a third-party service.
+
+The search box will be a React component placed in a template, so that it can be reused across all our docs pages. It will support navigation using arrow keys, and will be activated and dismissed using keyboard shortcuts.
+
+## Choosing what to index
+
+</TwoOfThreeCols>
+
+<ThreeColsStickyRight>
+
+In this example, we'll be using the structure illustrated in the file tree, with a docs folder containing the pages we want to include in search results. We will not be including pages such as the landing or the about pages. Our search component will be added to the `docs` template, so that all docs pages include it.
+
+In addition to the page title, we will index on the `description` entry in the page's frontmatter. So our docs pages will look like this:
+
+```jsx
+---
+title: ES modules
+description: A guide to using ES modules and URL imports.
+---
+
+{/* Page content... */}
+```
+
+<div className="sm:ml-4">
+  <SampleFileTree sample="search" wrapped={false} bleed={true} />
+</div>
+
+</ThreeColsStickyRight>
+
+<TwoOfThreeCols>
+
+## Building the search component
+
+### The search input field
+
+</TwoOfThreeCols>
+
+<ThreeColsStickyRight>
+
+Our search input field is a React component wrapping an `<input>` element with some keyboard listeners for navigating the results with the keyboard, and dismissing the search box using the escape key:
+
+```jsx
+import { forwardRef } from "react"
+
+export const SearchIcon = ({ className }) => <svg className={className} viewBox="0 0 20 20" fill="currentColor">
+  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+</svg>
+
+export const SearchInput = forwardRef(
+  ({ onKeyDown, onChange, onFocus, placeholder }, inputRef) => {
+  return <div className="relative antialiased">
+      <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+        <SearchIcon className="w-4 h-4 text-neutral-500" />
+      </div>
+      <input ref={inputRef}
+      type="text"
+      name="Search"
+      spellCheck="false"
+      placeholder={placeholder || "Search"}
+      onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            inputRef.current?.blur()
+          } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault()
+          }
+          onKeyDown(event)
+        }}
+      onChange={onChange}
+      onFocus={onFocus}
+      className="block bg-neutral-50 w-full border border-neutral-200 rounded-md py-1.5 pl-9 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm transition" />
+})
+```
+
+<div className="border border-neutral-200 rounded-lg px-2 py-1.5 text-neutral-400 flex flex-row gap-2 items-center text-sm truncate"><SearchIcon className="text-neutral-400 w-4 h-4" />Search docs...</div>
+
+</ThreeColsStickyRight>
+
+### The search results box
+
+<ThreeColsStickyRight>
+
+The search results are shown in an overlay panel, right below the search input. They can be navigated using the up and down arrow keys. Each entry is an `<a>` anchor link that opens the target page. It shows the page title, a snippet of the description, and the location of the page in the folder structure. 
+
+```jsx
+import cn from "classnames"
+
+export const SearchResult = ({ result, selected, onMouseOver, onClick }) => {
+  return <div
+      className={cn("rounded cursor-pointer", { "bg-sky-500": selected })}
+      onMouseOver={onMouseOver}>
+      <a
+        className="block m-3"
+        href={result.path}
+        onClick={onClick}>
+        <div className="flex flex-col gap-0.5">
+          <div className={cn("text-sm font-semibold truncate", {
+            "text-white": selected,
+            "text-sky-500": !selected
+          })}>
+            { result.title }
+          </div>
+          <div className={cn("text-sm truncate", {
+            "text-white": selected,
+            "text-neutral-800": !selected
+          })}>
+            { result.description }
+          </div>
+          { result.folders.length > 0 &&
+            <div className={cn("text-xs mt-0.5 truncate", {
+              "text-white": selected,
+              "text-neutral-500": !selected
+            })}>
+              { result.folders.join(" › ") }
+            </div>
+          }
+        </div>
+      </a>
+    </div>
+}
+
+export const SearchResults = ({ results, limit, selectedIndex, setSelectedIndex, onSubmit }) => {
+  return <div className="flex flex-col p-3 bg-white rounded-md border border-neutral-200 antialiased">
+      { results.slice(0, limit || 5).map((result, i) => {
+        return <SearchResult
+            selected={i === selectedIndex}
+            result={result}
+            onMouseOver={() => { setSelectedIndex(i) }}
+            onClick={onSubmit}
+          />
+      })}
+    </div>
+}
+```
+
+<div className="not-prose">
+  <SearchResults results={[{
+    path: "/docs/basics/es-modules",
+    title: "ES modules",
+    description: "A guide to using ES modules and URL imports.",
+    folders: ["Documentation", "Basics"]
+  }, {
+    path: "/docs/basics/markdoc",
+    title: "Markdoc",
+    description: "A guide to building interactive documents with Markdoc.",
+    folders: ["Documentation", "Languages"]
+  }, {
+    path: "/docs/layout-and-design/typography",
+    title: "Typography",
+    description: "Customizing the appearance of your text using web fonts.",
+    folders: ["Documentation", "Design"]
+  }
+  
+  ]} />
+</div>
+</ThreeColsStickyRight>
+
+<TwoOfThreeCols>
+
+## Passing data to the component
+
+By placing the search component inside a template, we can easily get access to the page frontmatter content to index. In fact, templates expose all the project's public page metadata via the `files` prop. You can read more about this in the [templates](/docs/layout-and-design/templates) article. Here is the simplest version of a template:
+
+```jsx
+export const Template = ({ files, children }) => {
+  return <div>{children}</div>
+}
+```
+
+The `files` prop contains metadata information about all the *public* pages in our project. Here is a snippet of the structure:
+
+```json
+{
+  "name": "pages",
+  "files": [
+    {
+      "name": "Index",
+      "path": "/"
+    }
+  ],
+  "folders": [
+    {
+      "name": "docs",
+      "folders": [
+        {
+          "name": "guides",
+          "files": [
+            {
+              "name": "ES modules.mdoc",
+              "path": "/docs/guides/es-modules",
+              "meta": {
+                "title": "ES modules",
+                "description": "A guide to using ES modules and URL imports."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+With that metadata at our disposal, let's build a list of objects to pass to Fuse.js for indexing. We'll use a recursive function that lists over all the folders and subfolders in the file tree:
+
+```jsx
+export const filesToSearchIndexData = (folder, parentFolderNames, rootName = "Home") => {
+  const isRoot = !parentFolderNames
+  const folders = [
+    ...(parentFolderNames || []),
+    isRoot ? rootName : folder.name
+  ]
+  let data = folder.files?.map(f => ({
+      path: f.path,
+      title: file.meta?.title,
+      description: file.meta?.description,
+      folders: folders
+    }))
+  for (const f of (folder.folders || [])) {
+    data = data.concat(filesToSearchData(f, folders, rootName))
+  }
+  return data
+}
+```
+
+In our template, we look for the `docs` folder in our `files` prop, and pass it to the `filesToSearchIndexData` function. We [memoize](https://reactjs.org/docs/hooks-reference.html#usememo) the result to avoid unnecessary extra computations.
+
+```jsx
+import { useMemo } from "react"
+
+export const Template = ({ files, children }) => {
+  const searchIndexData = useMemo(() => {
+    const docsFolder = files?.folders?.find(f => f.name === "docs")
+    return filesToSearchIndexData(docsFolder)
+  }, [files])
+
+  {/* Ready to pass to Fuse.js... */}
+
+  return <div>{children}</div>
+}
+```
+
+We have now transformed our project page metadata into a flat list of entries that can be passed to Fuse.js:
+
+```json
+[
+  {
+      path: "/docs/guides/es-modules",
+      title: "ES modules",
+      description: A guide to using ES modules and URL imports.",
+      folders: ["Home", "guides"]
+  },
+  // ...
+]
+```
+
+## Bringing it together
+
+With the search index data on one end, and the React component on the other, we are now ready to bring the two together. The Fuse.js search component is initiated as follows:
+
+```jsx
+import Fuse from "fuse.js"
+
+const fuse = new Fuse(searchIndexData), {
+    includeScore: true,
+    keys: ['title', 'description']
+  })
+```
+
+When entering text in the search input, we pass it on to the `fuse` instance:
+
+```jsx
+const fuseResult = fuse.search(value).map(r => r.item)
+```
+
+and the result can be passed on to our `SearchResults` component. Here is the full code for the main `Search` component, which also takes care of binding the keyboard shortcuts (arrow keys, <Keys cmd char="K" /> to activate, escape to dismiss), and dismissing the search results when clicking outside of the panel area:
+
+```jsx
+import { useCallback, useEffect, useReducer, useRef } from "react"
+import Fuse from "fuse.js"
+import cn from "classnames"
+
+export const reducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_LIMIT': {
+      return { ...state, limit: action.limit }
+    }
+    case 'SET_RESULTS': {
+      return {
+        ...state,
+        results: action.results,
+        selectedIndex: 0
+      }
+    }
+    case 'SELECT_INDEX': {
+      const numItems = state.limit ?
+        Math.min(state.limit, state.results.length)
+        : state.results.length
+      return {
+          ...state,
+          selectedIndex: action.index % numItems
+        }
+    }
+    case 'SELECT_NEXT': {
+      const numItems = state.limit ?
+        Math.min(state.limit, state.results.length)
+        : state.results.length
+      return {
+          ...state,
+          selectedIndex: (state.selectedIndex + 1) % numItems
+        }
+    }
+    case 'SELECT_PREVIOUS': {
+      const numItems = state.limit ?
+        Math.min(state.limit, state.results.length)
+        : state.results.length
+      return {
+          ...state,
+          selectedIndex: (state.selectedIndex - 1 + numItems) % numItems
+        }
+    }
+  }
+}
+
+export const initialState = {
+  results: [],
+  selectedIndex: 0,
+  limit: 0,
+}
+
+export const Search = ({ data, limit = 5, placeholder, indexKeys = ['title', 'description'] }) => {
+  const [state, dispatch] = useReducer(reducer, initialState)
+  const fuseRef = useRef()
+  const searchInputRef = useRef()
+  const searchResultsRef = useRef()
+
+  useEffect(() => {
+    dispatch({ type: "SET_LIMIT", limit })
+    fuseRef.current = new Fuse(data), {
+      includeScore: true,
+      keys: indexKeys
+    })
+  }, [folder, limit])
+
+  useEffect(() => {
+    const onKeyDown = () => {
+      if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
+
+  
+  
+  useEffect(() => {
+    const onDocumentClick = (e) => {
+      if (!searchInputRef.current.contains(e.target)
+        && !searchResultsRef.current.contains(e.target)) {
+        dispatch({ type: 'SET_RESULTS', results: [] })
+      }
+    }
+
+    document.addEventListener('click', onDocumentClick, true);
+    return () => {
+      document.removeEventListener('click', onDocumentClick, true);
+    }
+  }, [])
+
+  const onKeyDown = useCallback((event) => {
+    switch (event.key) {
+      case "ArrowDown": dispatch({ type: 'SELECT_NEXT' }); break;
+      case "ArrowUp": dispatch({ type: 'SELECT_PREVIOUS' }); break;
+      case "Escape": dispatch({ type: 'SET_RESULTS', results: [] }); break;
+      case "Enter": {
+        dispatch({ type: 'SET_RESULTS', results: [] })
+        window.open(state.results[state.selectedIndex]?.path, "_self");
+        break;
+      }
+      default: break
+    }
+  }, [state])
+
+  const search = useCallback((value) => {
+    const fuseResult = fuseRef.current.search(value)
+    dispatch({ type: 'SET_RESULTS', results: fuseResult.map(r => r.item) })
+  }, [])
+
+  const onFocus = useCallback(() => {
+    if (searchInputRef.current.value) {
+      search(searchInputRef.current.value)
+    }
+  }, [search])
+
+  const onBlur = useCallback(() => {
+    dispatch({ type: 'SET_RESULTS', results: [] })
+  }, [])
+  
+  return <div className="flex flex-col">
+      <SearchInput
+        ref={searchInputRef}
+        onKeyDown={onKeyDown}
+        onChange={(e) => search(e.target.value)}
+        onFocus={onFocus}
+        placeholder={placeholder}
+      />
+      <div
+        ref={searchResultsRef}
+        className={cn(
+          "relative z-50",
+          {
+            "opacity-0": state.results.length === 0
+          })}>
+        <div className="z-50 absolute left-0 right-[-320px] top-2">
+          <SearchResults
+            results={state.results}
+            selectedIndex={state.selectedIndex}
+            setSelectedIndex={i =>
+              dispatch({ type: "SELECT_INDEX", index: i})
+            }
+            onSubmit={() => { dispatch({ type: 'SET_RESULTS', results: [] }) }}
+            limit={state.limit}
+          />
+        </div>
+      </div>
+    </div>
+}
+```
+
+## Adding the search component to the template
+
+Back to our template, we can now add our `Search` component to the top of our pages:
+
+```jsx
+import { useMemo } from "react"
+import { Search } from "@components/search"
+
+export const Template = ({ files, children }) => {
+  const searchIndexData = useMemo(() => {
+    const docsFolder = files?.folders?.find(f => f.name === "docs")
+    return filesToSearchIndexData(docsFolder)
+  }, [files])
+
+  return <div>
+      <Search data={searchIndexData} />
+      {children}
+    </div>
+}
+```
+
+<br />
+<br />
+
+That's it! We now have a fast, keyboard-triggered, auto-indexing search component on our site. Every time a change is made to a docs page, or a new page is created in the `docs` folder and made public, it will appear in the search results.
+
+</TwoOfThreeCols>

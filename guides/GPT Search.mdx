@@ -1,0 +1,321 @@
+---
+index: 11
+title: Build a GPT search interface trained on your content, using OpenAI embeddings
+description: This guide walks you through building a GPT search interface on Motif, offering your visitors a way to query your content and get served customized answers, potentially from multiple sources.
+date: "2023-02-02"
+authors:
+  - name: "Michael Fester"
+    twitter: "michaelfester"
+    avatarUrl: "https://res.cloudinary.com/djp21wtxm/image/upload/v1651630007/Me_uyndrz.jpg"
+meta:
+  "description": "This guide walks you through building a GPT search interface on Motif, offering your visitors a way to query your content and get served customized answers, potentially from multiple sources."
+  "og:title": "Build a GPT search interface trained on your content, using OpenAI embeddings"
+  "og:description": "This guide walks you through building a GPT search interface on Motif, offering your visitors a way to query your content and get served customized answers, potentially from multiple sources."
+  "og:image": https://res.cloudinary.com/djp21wtxm/image/upload/v1675382577/i1600x842-z6DTLZWH50UX_hswgnl.png
+---
+
+import { Note } from "@components/ui/note"
+import { Bleed } from "@components/ui/bleed"
+import { WrappedImage } from "@components/ui/wrappedimage"
+import { GPTPlayground } from "@components/common/gptplayground"
+
+The result will look like this (try it out—it's trained on the [Motif docs](/docs)):
+
+<div className="mt-8 mb-16">
+  <Bleed>
+    <GPTPlayground />
+  </Bleed>
+</div>
+
+
+## Training the model
+
+Make sure the "GPT Search" intergration is installed. To do so, head over to the project settings, select Integrations → GPT Search and tap "Install integration".
+
+<WrappedImage
+  className="w-full sm:max-w-[744px] border rounded-lg mx-auto"
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1675368371/i1488x678-yu8pOxpxWmt0_m5x2ra.png"
+  alt="Install GPT Search" />
+
+
+Now, open the Share menu, navigate to the Integrations tab, find the GPT Search integration and tap "Train".
+
+<WrappedImage
+  className="w-full sm:max-w-[510px] border rounded-lg mx-auto"
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1675368266/i1020x554-GIxyZe7Bwpjv_hwccpc.png"
+  alt="Train Search GPT" />
+
+## Testing the model
+
+Let's test that the model works as expected by running some sample queries in the GPT Playground. Still in the Share menu, under the Integrations tab, tap "Open playground":
+
+<WrappedImage
+  className="w-full sm:max-w-[966px] border rounded-lg mx-auto"
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1675379038/i1600x917-dgUP5HMiZjIr_dw4ul9.png"
+  alt="GPT Playground" />
+
+You can now prompt the model, and check that the answers match. The prompt also includes pointers to the most relevant articles used to produce the answer.
+
+<Note type="info">You can read more about how we built the OpenAI integration in our blog post: [Building a prompt for docs using OpenAI, Upstash and Vercel edge functions](/blog/building-a-prompt-for-docs-with-openai) →</Note>
+
+## Querying the model via API
+
+Now that the model is trained, we can programmatically query it, which is what we need to build our custom prompt interface. The endpoint is accessible at:
+
+```
+POST /api/motif/v1/integrations/gptsearch/prompt
+```
+
+If successful, the response is of the form:
+
+```json
+{
+  "completion": "...",
+  "references": [<page_id_1>, <page_id_2>, ...]
+}
+```
+
+where `references` is a list of page ids that can be used to provide links to the relevant pages.
+
+## Building a prompt interface
+
+Let's build a prompt interface in Motif, to allow visitors to search our content by asking questions. The interface will be similar to a chat interface, with the input bar at the bottom. Try entering a query below:
+
+<div className="my-16">
+  <Bleed>
+    <GPTPlayground />
+  </Bleed>
+</div>
+
+The code is as follows, and can be copied as-is into any MDX page:
+
+```jsx
+import cn from "classnames"
+import { useCallback, useEffect, useRef, useState } from "react"
+
+export const LoadingDots = ({ className }) => {
+  return (
+    <span className="loading-dots">
+      <span className={className} />
+      <span className={className} />
+      <span className={className} />
+    </span>
+  )
+}
+
+export const SendIcon = ({ className }) => {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="currentColor">
+      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+    </svg>
+  )
+}
+
+export const ChatItem = ({
+  message,
+  references,
+  isSelf,
+}) => { 
+  return (
+    <div className="flex flex-col justify-end">
+      <div
+        className={cn('rounded-lg sm:rounded-xl text-sm chat-item', {
+          'place-self-end bg-neutral-900 text-white max-w-[70%] px-3 py-1 mt-4':
+            isSelf,
+          'bg-neutral-50 p-4': !isSelf,
+        })}
+      >
+        <div>{message}</div>
+        {references && references?.length > 0 && (
+          <div className="mt-4 border-t border-dotted pt-4">
+            <p className="font-medium mb-1 text-neutral-700">References</p>
+            {references.map((reference) => {
+                return (
+                  <div key={`chat-reference-${reference}`}>
+                    <p className="inline-block text-sm subtleUnderline text-neutral-500">
+                      {reference}
+                    </p>
+                  </div>
+                )
+              })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export const GPTPlayground = () => {
+  const [prompt, setPrompt] = useState(undefined)
+  const [chatItems, setChatItems] = useState(undefined)
+  const [loading, setLoading] = useState(false)
+  
+  const submitPrompt = useCallback(
+    async (e) => {
+      e.preventDefault()
+      setPrompt("")
+      setChatItems((i) => [...(i || []), {
+        message: prompt, isSelf: true
+      }])
+      setLoading(true)
+      const res = await fetch('/api/motif/v1/integrations/gptsearch/prompt', {
+        method: 'POST',
+        body: JSON.stringify({ prompt }),
+        headers: {
+          'Content-Type': 'application/json',
+          accept: 'application/json',
+        },
+      })
+      if (res.ok) {
+        const json = await res.json()
+        const completion = json.completion
+        const references = json.references
+        setChatItems((i) => [
+          ...(i || []),
+          {
+            message: completion,
+            references: references,
+            isSelf: false,
+          },
+        ])
+      } else {
+        setChatItems((i) => [
+          ...(i || []),
+          {
+            message: "An error occurred.",
+            isSelf: false,
+          },
+        ])
+      }
+      setLoading(false)
+    },
+    [prompt]
+  )
+
+  return <div className="h-[400px] bg-white relative border shadow-2xl rounded-md px-6">
+      <div
+        className="relative flex flex-col mx-auto max-w-screen-sm w-full h-full pb-28 overflow-y-auto">
+        <div
+          className="flex-grow flex flex-col gap-2 pb-8 -mb-8 justify-end bottom-scroller">
+          {chatItems?.map(({ message, references, isSelf }, i) => {
+            return (
+              <div className="bottom-scroller-item">
+                <ChatItem
+                  key={`prompt-${i}`}
+                  message={message}
+                  references={references}
+                  isSelf={isSelf}
+                />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      <div className="absolute left-0 right-0 bottom-0 px-6">
+        <div className="w-full max-w-screen-sm mx-auto">
+          <div
+            className={cn(
+              'rounded-full bg-neutral-50 px-3 py-3 flex items-center w-min transform transition duration-500 mb-4',
+              {
+                'opacity-0 translate-y-2': !loading,
+                'opacity-100 translate-y-0': loading,
+              }
+            )}
+          >
+            <LoadingDots className="bg-neutral-500" />
+          </div>
+          <div className="pb-6">
+            <form onSubmit={submitPrompt}>
+              <div className="flex flex-row items-center gap-4 mx-auto bg-white rounded-full border border-neutral-100 px-2 py-0 text-sm mt-2 focus-within:ring-2 focus-within:ring-slate-900 ring-offset-2 transition overflow-hidden">
+                  <input
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Ask Motif docs..."
+                    className="flex-grow outline-none px-1.5 py-1.5"
+                    type="text"
+                  />
+                  <button type="submit" className="w-5 h-5 text-sky-500 hover:text-slate-900 transition flex-none group">
+                    <SendIcon className="w-5 h-5 transform rotate-90" />
+                  </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+}
+
+<GPTPlayground />
+```
+
+In addition, here are some CSS classes that handle the bubble animations and layout, which can by copied to `/styles/main.css`:
+
+```css
+// main.css
+
+.bottom-scroller {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y proximity;
+}
+
+.bottom-scroller-item:last-child {
+  scroll-snap-align: end;
+}
+
+.chat-item {
+  animation-name: slideup;
+  animation-duration: 0.5s;
+  @apply ease-in-out;
+}
+
+.loading-dots {
+  @apply inline-flex text-center items-center leading-7;
+}
+
+.loading-dots > span {
+  @apply rounded-full w-1.5 h-1.5 !important;
+  animation-name: blink;
+  animation-duration: 1.4s;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  margin: 0 2px;
+}
+
+.loading-dots > span:nth-of-type(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots > span:nth-of-type(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes slideup {
+  from {
+    margin-bottom: -20px;
+    opacity: 0;
+  }
+  5% {
+    margin-bottom: -20px;
+    opacity: 0;
+  }
+  to {
+    margin-bottom: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}
+```
+
+That's it! We now have a prompt interface ready to serve custom answers from an OpenAI language model trained on all our public pages!

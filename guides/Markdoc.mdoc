@@ -1,0 +1,462 @@
+---
+index: 8
+title: Markdoc for content writers
+description: This guide will help you get up to speed on a Motif docs project powered by Markdoc.
+date: "2022-09-06"
+---
+
+## Getting started
+
+### Step 1: Sign in
+
+Head over to [motif.land/login](https://motif.land/login), enter your email, and confirm the login link sent to your inbox. Jump back to the Motif app.
+
+### Step 2: Choose the Ribbon Docs (Markdoc) template
+
+Create a new team, and a new project. Give your project a name, and select the "Ribbon Docs (Markdoc)" template. Then hit "Create project".
+
+{%img src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662649467/i1600x860-HeaFXdsEUV3m_dw0uk6.png" /%}
+
+{% note %}If you already have a docs site, {% link href=$urls.contactEmail %}reach out{% /link %} and we can assist you with the migration to Markdoc.{% div className="mt-4 mb-4" %}{% button href=$urls.contactEmail size="smb" variant="pill" %}Get help migrating →{% /button %}{% /div %}{% /note %}
+
+{% spacer /%}
+
+### Step 3: Enter writing mode
+
+By default, the Motif sidebar will show the entire project content, including project configuration files, templates, stylesheets and components. Since you will be mainly focused on creating new pages, we recommend you to change the view to only show the content of the `pages` folder. This is done by clicking on the "Source" menu at the bottom left of the screen, and selecting "Pages":
+
+{% wrappedimg
+  alt="Pages view"
+  className="w-full sm:max-w-[400px] border rounded-lg mx-auto"
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662474675/i834x564-yrzfDVudHfjV_pgj6tc.png"
+/%}
+
+You are now ready to create and publish content!
+
+## Howtos
+
+### Basics
+
+{% borderedPanel %}
+
+{% collapse title="How do I create a Markdoc page?" %}
+Hit the "+" button at the bottom of the sidebar, select "New file", and add the `mdoc` extension to turn it into a Markdoc page:
+
+{% wrappedimg
+  alt="Pages view"
+  className="w-full sm:max-w-[300px] border rounded-lg mx-auto"
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662482767/i560x462-L-lRuv9KJK5t_p40vve.png"
+/%}
+{% /collapse %}
+
+{% collapse title="How do I set a page title?" %}
+By default, the page title is the same as the file name. If you want another title, you can set it in the page frontmatter. The frontmatter is a section, at the top of your page, delimited by three dashes:
+```md
+---
+title: My custom page title
+---
+
+Page content...
+```
+{% /collapse %}
+
+{% collapse title="How do I set a page description?" %}
+Similar to the title, the page description is added in the page frontmatter:
+```md
+---
+title: My custom page title
+description: My page subtitle
+---
+
+Page content...
+```
+{% /collapse %}
+
+{% collapse title="How do I add a heading?" %}
+In Markdown/Markdoc, headings are added by prepending one or more `#` symbols before the text.
+
+```md
+# Heading 1
+## Heading 2
+### Heading 3
+```
+{% /collapse %}
+
+{% collapse title="How do I add an image?" %}
+Drag the image into the editor, and it will be uploaded to Motif. By default, it will insert a regular Markdown image tag:
+```md
+![Alt text](https://res.cloudinary.com/djp21wtxm/image/upload/v1662474675/i834x564-yrzfDVudHfjV_pgj6tc.png)
+```
+If you want more options, such as adding a legend, use the custom `img` component:
+{% code %}
+```md
+{% img
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662474675/i834x564-yrzfDVudHfjV_pgj6tc.png"
+  legend="Image description"
+  alt="Alt text"
+/%}
+```
+{% /code %}
+
+If you have images hosted elsewhere, simply replace the `src` part with their public URLs.
+{% /collapse %}
+
+{% collapse title="How do I resize an image?" %}
+You can resize an image by either using the `width` attribute with the supported values `1/4`, `1/3`, `1/2`, `2/3`, `3/4`, as follows:
+{% code %}
+```md
+{% img
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662474675/i834x564-yrzfDVudHfjV_pgj6tc.png"
+  width="1/3"
+/%}
+```
+{% /code %}
+
+If you want a more precise value, you can use Tailwind classes via the `className` attribute, for instance:
+
+{% code %}
+```md
+{% img
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662474675/i834x564-yrzfDVudHfjV_pgj6tc.png"
+  className="w-[200px] sm:w-[400px]"
+/%}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I center or right align an image?" %}
+You can center an image by setting the `center` attribute to `true`:
+{% code %}
+```md
+{% img
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662474675/i834x564-yrzfDVudHfjV_pgj6tc.png"
+  size="1/2"
+  center="true"
+/%}
+```
+{% /code %}
+Similarly, you can right-align an image by setting the `right` attribute to `true`:
+{% code %}
+```md
+{% img
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662474675/i834x564-yrzfDVudHfjV_pgj6tc.png"
+  size="1/2"
+  right="true"
+/%}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I add a link?" %}
+Links have the form `[Link label](link-url)`. For external links, simply provide the full URL:
+```md
+[Motif website](https://motif.land)
+```
+For internal links, provide the absolute path to the page instead:
+```md
+[My page](/link/to/my/page)
+```
+The link of an internal page is determined by its name, and the folder it's in. Everything is lowercased, and spaces are replaced with dashes. For instance, if you have a page named `Responsive Designs` inside a folder named `Layout and Design`, its path will be `/layout-and-design/responsive-designs`, and you may link to it as follows:
+```md
+[Responsive Designs](/layout-and-design/responsive-designs)
+```
+{% /collapse %}
+
+{% collapse title="How do I add an email link?" %}
+Simply prepend `mailto:` to the email address, and use the regular link tag, e.g.:
+```md
+[Contact us](mailto:contact@example.com)
+```
+{% /collapse %}
+
+{% collapse title="How do I make my text italic or bold?" %}
+*Italic* and **bold** text are enclosed within one or two asterisks:
+```
+Some *italic* and **bold** text.
+```
+You may also select some text, and use the shortcuts {% keys cmd=true char="I" /%} (italic) and {% keys cmd=true char="B" /%} (bold).
+{% /collapse %}
+
+{% collapse title="How do I add a horizontal separator?" %}
+A horizontal separator can be added using three dashes:
+```md
+Above
+
+---
+
+Below
+```
+{% /collapse %}
+
+{% collapse title="How do I add a table?" %}
+In Markdoc, tables use the following syntax:
+
+{% code %}
+```
+{% table %}
+* Heading 1
+* Heading 2
+---
+* Row 1 Cell 1
+* Row 1 Cell 2
+---
+* Row 2 Cell 1
+* Row 2 cell 2
+{% /table %}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I add a note?" %}
+Notes allow you to highlight content with various levels of prominence, for instance warnings or errors.
+{% code %}
+```
+{% note %}
+An info note.
+{% /note %}
+
+{% note type="warning" %}
+A warning note.
+{% /note %}
+
+{% note type="error" %}
+An error note.
+{% /note %}
+```
+{% /code %}
+
+{% note %}An info note.{% /note %}
+
+{% note type="warning" %}A warning note.{% /note %}
+
+{% note type="error" %}An error note.{% /note %}
+
+{% /collapse %}
+
+{% collapse title="How do I add a collapsible section?" %}
+A collapsible section, such as what you are currently reading, allows you to hide away large amounts of content. It is revealed by clicking on the heading.
+{% code %}
+```
+{% collapse title="Heading" %}
+Hidden content.
+{% /collapse %}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I add a tabs block?" %}
+A tab block enables you to organize your content in overlapping panels, accessible via a horizontal tab bar.
+
+{% tabs %}
+{% tab title="Tab 1" %}
+Tab 1 content.
+{% /tab %}
+{% tab title="Tab 2" %}
+Tab 2 content.
+{% /tab %}
+{% tab title="Tab 3" %}
+Tab 3 content.
+{% /tab %}
+{% /tabs %}
+
+{% code %}
+```
+{% tabs %}
+  {% tab title="Tab 1" %}
+    Tab 1 content.
+  {% /tab %}
+  {% tab title="Tab 2" %}
+    Tab 2 content.
+  {% /tab %}
+  {% tab title="Tab 3" %}
+    Tab 3 content.
+  {% /tab %}
+{% /tabs %}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I publish a page?" %}
+Hit the Share button, and toggle on "Public access" for the page. When ready, hit "Publish site".
+
+{% wrappedimg
+  bleed=false
+  alt="Publish site"
+  className="w-full sm:max-w-[400px] border rounded-lg mx-auto"
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662486934/i768x740-j4e02mQVfHI__vbvqpo.png"
+/%}
+
+{% /collapse %}
+
+{% collapse title="How do I preview a page before publishing it?" %}
+Yes. While working on your site, you may want to see how it looks before publishing it. In the Share menu, you will find a "Preview" URL just for that:
+
+{% wrappedimg
+  bleed=false
+  alt="Preview URL"
+  className="w-full sm:max-w-[400px] border rounded-lg mx-auto"
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1662479642/i798x580-raOJGSgZWT0R_xtll2q.png"
+/%}
+
+{% /collapse %}
+
+{% /borderedPanel %}
+
+### Custom components
+
+In the Markdoc template, some commonly used components have been created to work out of the box. {% link href=$urls.contactEmail %}Reach out{% /link %} if you want more.
+
+{% borderedPanel %}
+
+{% collapse title="How do I add a YouTube video?" %}
+{% code %}
+```md
+{% youtube src="YOUR_YOUTUBE_EMBED_URL" /%}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I add a Loom video?" %}
+{% code %}
+```md
+{% loom src="YOUR_LOOM_EMBED_URL" /%}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I add a Twitter embed?" %}
+{% code %}
+```md
+{% tweet link="YOUR_TWITTER_URL" /%}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I add a Typeform?" %}
+{% code %}
+```md
+{% typeform src="YOUR_TYPEFORM_EMBED_URL" /%}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I add a Pitch deck?" %}
+{% code %}
+```md
+{% pitch src="YOUR_PITCH_EMBED_URL" /%}
+```
+{% /code %}
+{% /collapse %}
+
+{% collapse title="How do I add an Arcade demo?" %}
+{% code %}
+```md
+{% arcade src="YOUR_ARCADE_EMBED_URL" /%}
+```
+{% /code %}
+{% /collapse %}
+
+{% /borderedPanel %}
+
+## Configuration
+
+{% borderedPanel %}
+
+{% collapse title="How do I configure the navigation bar links?" %}
+The navigation bar is configured in the file named `project-config.ts`, at the root of your project source. If you previously switched to the "Pages" view, you will need to switch back to "Source" view to see it in the sidebar. Alternatively, you can jump to the file by hitting {% keys cmd=true char="P" /%} and type `project-config`.
+```ts
+export default {
+  navbar: {
+    topLinks: [
+      { title: "Support", href: "/" },
+      // ...
+    ],
+    tabs: [
+      { title: "Home", href: "/" },
+      // ...
+    ],
+  },
+```
+{% /collapse %}
+
+{% collapse title="How do I add an entry to the guides sidebar?" %}
+Similar to the navigation bar, the Guides sidebar menu in configured in `project-config.ts`, under the `sidebar` entry.
+
+```ts
+export default {
+  // ...
+  sidebars: {
+    guides: [
+      {
+        title: "Getting started",
+        pages: [
+          {
+            title: "Introduction",
+            href: "/guides/getting-started/introduction",
+          },
+          {
+            title: "Installation",
+            href: "/guides/getting-started/installation",
+          },
+        ],
+      },
+      // ...
+    ]
+  }
+  // ...
+}
+```
+
+To add a new section or a new page inside an existing section, simply edit the list with the appropriate info.
+{% /collapse %}
+
+{% collapse title="How do I configure the guides gallery?" %}
+Similar to the guides sidebar, the guides gallery is configured under the `guidesGallery` entry in `project-config.ts`
+
+```ts
+export default {
+  // ...
+  sampleGallery: {
+    Develop: [
+      {
+        title: "Markdoc",
+        // ...
+      },
+    ]
+  }
+}
+```
+
+The top level keys (`Develop`, `Databases`, `Deploy`) define the tab names. Inside each of the entries are the links to the guides, which include a title, a description, a cover image, and the path to the guide itself. You can add as many tabs and entries as you need, and the tab panel will adjust itself accordingly.
+{% /collapse %}
+
+{% collapse title="How do I change the primary color?" %}
+By default, the primary color is `sky`. This can be changed in `tailwind.config.js`, located at the root of your project. Locate the `colors` entry, and change the `primary` key to either another predefined color from the [Tailwind palette](https://tailwindcss.com/docs/customizing-colors):
+
+```js
+colors: {
+  primary: colors.sky,
+},
+```
+
+or create your own, by specifying each of the variants explicity:
+
+```js
+colors: {
+  primary: {
+    50: '#e7fdff',
+    100: '#cffafe',
+    200: '#a5f3fc',
+    300: '#67e8f9',
+    400: '#22d3ee',
+    500: '#06b6d4',
+    600: '#0891b2',
+    700: '#0e7490',
+    800: '#155e75',
+    900: '#164e63',
+  }
+},
+```
+{% /collapse %}
+
+{% /borderedPanel %}

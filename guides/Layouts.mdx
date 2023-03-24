@@ -1,0 +1,337 @@
+---
+index: 4
+title: Create dynamic page layouts
+description: Create common layouts for your pages, such as grids and columns.
+date: "2022-08-16"
+authors:
+  - name: "Michael Fester"
+    twitter: "michaelfester"
+    avatarUrl: "https://res.cloudinary.com/djp21wtxm/image/upload/v1651630007/Me_uyndrz.jpg"
+---
+
+import { Wrapper } from "@components/ui/wrapper"
+import { TwoOfThreeCols } from "@components/ui/gridcolspans"
+
+<TwoOfThreeCols>
+
+Layouts, such as columns and grids, can be easily achieved using components and Tailwind `flex` and `grid` classes. They are equally easy to make reponsive.
+
+## Column layout
+
+A basic column layout can be achieved using either the `flex` or `grid` display classes. Here is an example with `flex`:
+
+```jsx
+<div className="flex flex-col sm:flex-row gap-4">
+  <div className="flex-grow ...">{/* ... */}</div>
+  <div className="flex-grow ...">{/* ... */}</div>
+</div>
+```
+
+This results in the following evenly sized 2-column layout:
+
+<Wrapper background="grid">
+  <div className="flex flex-col sm:flex-row w-full gap-4">
+    <StripedDiv className="flex-grow h-48" />
+    <StripedDiv className="flex-grow h-48" />
+  </div>
+</Wrapper>
+
+Notice how we use `flex-col sm:flex-row` to arrange items in a column on mobile, and in a row on larger screens. We also use `gap-4` to specify that spacing between the columns.
+
+### Growing a column
+
+You can specify how columns should grow  using `flex-grow` (grow as much as possible) and `flex-none` (don't grow).
+
+```jsx
+<div className="flex flex-col sm:flex-row gap-4">
+  <div className="flex-none w-24 ...">{/* ... */}</div>
+  <div className="flex-grow ...">{/* ... */}</div>
+  <div className="flex-none w-24 ...">{/* ... */}</div>
+</div>
+```
+
+<Wrapper background="grid">
+  <div className="flex flex-col sm:flex-row w-full gap-4">
+    <StripedDiv className="flex-none h-48 w-24" />
+    <StripedDiv className="flex-grow h-48" />
+    <StripedDiv className="flex-none h-48 w-24" />
+  </div>
+</Wrapper>
+
+Some more options can be found in the <a href="https://tailwindcss.com/docs/grid-template-columns" target="_blank" rel="noreferrer">Tailwind CSS documentation</a>.
+
+## Grid layout
+
+Grid layouts can be created using the Tailwind `grid` class.
+
+```jsx
+<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <div className="h-48 ...">{/* ... */}</div>
+  <div className="h-48 ...">{/* ... */}</div>
+  <div className="h-48 ...">{/* ... */}</div>
+  <div className="h-48 ...">{/* ... */}</div>
+  <div className="h-48 ...">{/* ... */}</div>
+  <div className="h-48 ...">{/* ... */}</div>
+</div>
+```
+
+This results in the following:
+
+<Wrapper background="grid">
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+    <StripedDiv className="h-48" />
+    <StripedDiv className="h-48" />
+    <StripedDiv className="h-48" />
+    <StripedDiv className="h-48" />
+    <StripedDiv className="h-48" />
+    <StripedDiv className="h-48" />
+  </div>
+</Wrapper>
+
+Notice again how we use `grid-cols-1 sm:grid-cols-3` to create a 1-column grid on mobile, and a 3-column grid on larger screens. We also use `gap-4` to specify that spacing between each item.
+
+### Adjusting column span
+
+If you want an item to span more than one column, you can use the `col-span-` class:
+```jsx
+<div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+  <div className="h-48 ...">{/* ... */}</div>
+  <div className="h-48 col-span-2 ...">{/* ... */}</div>
+  <div className="h-48 ...">{/* ... */}</div>
+  <div className="h-48 ...">{/* ... */}</div>
+  <div className="h-48 col-span-2 ...">{/* ... */}</div>
+  <div className="h-48 col-span-3 ...">{/* ... */}</div>
+</div>
+```
+
+<Wrapper background="grid">
+  <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 w-full">
+    <StripedDiv className="h-48" />
+    <StripedDiv className="h-48 col-span-2" />
+    <StripedDiv className="h-48" />
+    <StripedDiv className="h-48" />
+    <StripedDiv className="h-48 col-span-2" />
+    <StripedDiv className="h-48 col-span-3" />
+  </div>
+</Wrapper>
+
+Read more about the options for flex and grid layouts in the <a href="https://tailwindcss.com/docs/grid-template-columns" target="_blank" rel="noreferrer">Tailwind CSS documentation</a>.
+
+## Full page layout
+
+Now, let's bring it all together and build a page that looks like this:
+
+</TwoOfThreeCols>
+
+<Wrapper>
+  <div className="flex flex-col w-full border border-neutral-200 rounded-md bg-white h-[400px] overflow-hidden">
+    <div className="flex flex-row flex-none border-b border-neutral-200 items-center p-4 gap-4">
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 1</span>
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 2</span>
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 3</span>
+    </div>
+    <div className="flex flex-row flex-grow">
+      <div className="flex flex-col flex-none p-4 gap-4 border-r">
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 1</span>
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 2</span>
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 3</span>
+      </div>
+      <div className="flex flex-col flex-grow p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+        </div>
+      </div>
+    </div>
+  </div>
+</Wrapper>
+
+<TwoOfThreeCols>
+
+### The navigation bar
+
+First, let's add the navigation bar at the top:
+
+</TwoOfThreeCols>
+
+```jsx
+<div className="flex flex-col">
+  <div className="flex flex-row flex-none border-b items-center p-4 gap-4">
+    <a href="/">Link 1</a>
+    <a href="/">Link 2</a>
+    <a href="/">Link 3</a>
+  </div>
+</div>
+```
+
+<Wrapper>
+  <div className="flex flex-col w-full border border-neutral-200 bg-white rounded-md h-[400px] overflow-hidden">
+    <div className="flex flex-row flex-none border-b items-center p-4 gap-4">
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 1</span>
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 2</span>
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 3</span>
+    </div>
+    <StripedDiv className="flex-grow" />
+  </div>
+</Wrapper>
+
+<TwoOfThreeCols>
+
+The page container uses a `flex flex-col` layout for a vertical layout. The navigation bar uses a `flex flex-row` layout to horizontally place its children links. `flex-none` indicates that the navigation bar should not grow vertically.
+
+### The sidebar
+
+Let's add the sidebar:
+
+</TwoOfThreeCols>
+
+```jsx
+<div className="flex flex-col">
+  <div className="flex flex-row flex-none border-b items-center p-4 gap-4">
+    <a href="/">Link 1</a>
+    <a href="/">Link 2</a>
+    <a href="/">Link 3</a>
+  </div>
+  <div className="flex flex-row flex-grow">
+    <div className="flex flex-col flex-none p-4 gap-4 border-r">
+      <a href="/">Post 1</a>
+      <a href="/">Post 2</a>
+      <a href="/">Post 3</a>
+    </div>
+  </div>
+</div>
+```
+
+<Wrapper>
+  <div className="flex flex-col w-full bg-white border border-neutral-200 rounded-md h-[400px] overflow-hidden">
+    <div className="flex flex-row flex-none border-b border-neutral-200 items-center p-4 gap-4">
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 1</span>
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 2</span>
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 3</span>
+    </div>
+    <div className="flex flex-row flex-grow">
+      <div className="flex flex-col flex-none p-4 gap-4 border-r">
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 1</span>
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 2</span>
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 3</span>
+      </div>
+      <StripedDiv className="flex-grow" />
+    </div>
+  </div>
+</Wrapper>
+
+
+<TwoOfThreeCols>
+
+We've first added a main container (for the sidebar and content), which has the `flex-grow` class, indicating that it should fill as much as it can (vertically), and a `flex flex-row` class indicating that items within it should be positioned horizontally.
+
+The sidebar has the class `flex flex-col` for its children links to be positioned in a column layout (that is, vertically).
+
+### The main content
+
+Finally, we can add the main content.
+
+</TwoOfThreeCols>
+
+```jsx
+<div className="flex flex-col">
+  <div className="flex flex-row flex-none border-b items-center p-4 gap-4">
+    <a href="/">Link 1</a>
+    <a href="/">Link 2</a>
+    <a href="/">Link 3</a>
+  </div>
+  <div className="flex flex-row flex-grow">
+    <div className="flex flex-col flex-none p-4 gap-4 border-r">
+      <a href="/">Post 1</a>
+      <a href="/">Post 2</a>
+      <a href="/">Post 3</a>
+    </div>
+    <div className="flex flex-col flex-grow p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-gray-100 h-32 rounded-md" />
+        <div className="bg-gray-100 h-32 rounded-md" />
+        <div className="bg-gray-100 h-32 rounded-md" />
+        <div className="bg-gray-100 h-32 rounded-md" />
+        <div className="bg-gray-100 h-32 rounded-md" />
+        <div className="bg-gray-100 h-32 rounded-md" />
+        <div className="bg-gray-100 h-32 rounded-md" />
+        <div className="bg-gray-100 h-32 rounded-md" />
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+<Wrapper>
+  <div className="flex flex-col w-full bg-white border border-neutral-200 rounded-md h-[400px] overflow-hidden">
+    <div className="flex flex-row flex-none border-b items-center p-4 gap-4">
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 1</span>
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 2</span>
+      <span className="font-semibold cursor-pointer hover:text-sky-500">Link 3</span>
+    </div>
+    <div className="flex flex-row flex-grow">
+      <div className="flex flex-col flex-none p-4 gap-4 border-r">
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 1</span>
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 2</span>
+        <span className="font-semibold cursor-pointer hover:text-sky-500">Post 3</span>
+      </div>
+      <div className="flex flex-col flex-grow p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+          <GridItem />
+        </div>
+      </div>
+    </div>
+  </div>
+</Wrapper>
+
+<TwoOfThreeCols>
+
+This container has the `flex-grow` class to make it fill the remaining space (horizontally). Furthermore, it has the `grid grid-cols-2 sm:grid-cols-4` class, which takes care of positioning all the children in a grid layout. For small screens, two columns are used (`grid-cols-2`), and for large screens, four columns are used (`grid-cols-4`).
+
+### Adding the layout to a template
+
+You will typically want to reuse such a layout for several pages, without having to copy it to each new page. Read the article on [Templates](/docs/layout-and-design/templates) for how to achieve this.
+
+</TwoOfThreeCols>
+
+export const GridItem = () => (
+  <div className="bg-gray-100 h-32 rounded-md flex items-center justify-center">
+    <ImageIcon />
+  </div>
+)
+
+export const ImageIcon = () => (
+  <svg
+    className="h-10 w-10 self-center justify-self-center"
+    viewBox="0 0 20 20"
+    fill="#fff"
+  >
+    <path
+      fillRule="evenodd"
+      d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+      clipRule="evenodd"
+    />
+  </svg>
+)
+
+export const StripedDiv = ({ className }) => (
+  <div
+    className={`bg-sky-50 rounded-md ${className}`}
+    style={{
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23bae6fd' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E")`,
+    }}
+  />
+)

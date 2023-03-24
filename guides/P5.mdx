@@ -1,0 +1,107 @@
+---
+index: 12
+title: Explore creative coding with P5.js
+description: Use p5.js to build visual and interactive content in Motif.
+date: "2023-01-15"
+---
+
+import { TwoOfThreeCols } from "@components/ui/gridcolspans"
+
+<TwoOfThreeCols>
+[P5.js](https://p5js.org/) is a JavaScript library for creative coding, which simplifies the process of creating visual and interactive components thanks to a collection of helper functions. It runs in the browser, which makes it a great fit for Motif.
+
+## The setup
+
+Our demo will consist of a ball moving around inside a rectangle.
+
+Let's create a file with our drawing code. In this example, we will do it in TypeScript, which will provide nice type checking. In your `pages` folder (it could be anywhere), create a file named `ball.ts` and add the following:
+</TwoOfThreeCols>
+
+```ts
+import type p5Type from 'p5'
+
+let x = 50
+let y = 50
+
+const canvasX = 500
+const canvasY = 500
+
+export const setup = (p5: p5Type, canvasParentRef: Element): void => {
+  p5.createCanvas(canvasX, canvasY).parent(canvasParentRef)
+}
+
+export const draw = (p5: p5Type): void => {
+  p5.background(0)
+  p5.ellipse(x, y, 70, 70)
+  if (x !== canvasX - 50 && y === 50) { x++ }
+  if (x === canvasX - 50 && y !== canvasY - 50) { y++ }
+  if (y === canvasY - 50 && x !== 50) { x-- }
+  if (y !== 50 && x === 50) { y-- }
+}
+```
+
+<TwoOfThreeCols>
+Now, let's import this drawing code into an MDX page. Create a file named `my-ball-demo.mdx` next to `ball.ts`, and add the following.
+</TwoOfThreeCols>
+
+```jsx
+import { useState, useEffect } from "react"
+import { draw, setup } from './ball'
+
+export const BallDemo = () => {
+  const [Component, setComponent] = useState(<div>Loading...</div>)
+
+  useEffect(() => {
+    import('https://cdn.skypack.dev/react-p5')
+      .then((mod) => mod.default)
+      .then(Sketch => {
+        setComponent(<Sketch setup={setup} draw={draw} />)
+      })
+  }, [])
+  
+  return Component
+}
+
+## Ball experiment
+
+It's alive!
+
+<BallDemo />
+```
+
+import { useEffect, useState } from "react"
+import { setup, draw } from '@components/content/p5'
+
+export const BallDemo = () => {
+  const [Component, setComponent] = useState(<div>Loading...</div>)
+
+  useEffect(() => {
+    import('https://cdn.skypack.dev/react-p5')
+      .then((mod) => mod.default)
+      .then(Sketch => {
+        setComponent(<Sketch setup={setup} draw={draw} />)
+      })
+  }, [])
+  
+  return Component
+}
+
+import { Bleed } from "@components/ui/bleed"
+
+Our demo is now running:
+
+<Bleed>
+  <div className="text-center bg-neutral-50 rounded-md px-8 py-16 flex itemx-center justify-center border border-dashed overflow-hidden">
+    <div className="prose text-left">
+      <h2>Ball experiment</h2>
+      <p>It's alive!</p>
+      <BallDemo />
+    </div>
+  </div>
+</Bleed>
+
+<TwoOfThreeCols>
+### A note on client versus server-side rendering (SSR)
+
+In the above, you will notice that the `react-p5` package is not imported at the top-level, but inside a `useEffect` hook. React P5 does not support server-side rendering, and only works on the client-side. In order to produce performant websites that work well for SEO, Motif will always attempt to first render the page on the server. The above trick is our way of telling Motif/React to only use React P5 on the client (everything inside a `useEffect` hook is skipped on the server).
+</TwoOfThreeCols>

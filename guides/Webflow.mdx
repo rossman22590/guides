@@ -1,0 +1,79 @@
+---
+index: 5
+title: "Integrate with Webflow"
+description: This guide covers how to import Motif-authored content and code into a Webflow website.
+date: "2022-07-10"
+authors:
+  - name: "Michael Fester"
+    twitter: "michaelfester"
+    avatarUrl: "https://res.cloudinary.com/djp21wtxm/image/upload/v1651630007/Me_uyndrz.jpg"
+---
+
+import { TwoOfThreeCols } from "@components/ui/gridcolspans"
+
+<TwoOfThreeCols>
+
+[Webflow](https://webflow.com/) is a great no-code tool for building websites. However, when it comes to authoring text-heavy content, such as a documentation site or a changelog, a plain text interface like Motif might be better suited.
+
+Suitingly, all content created on Motif is exposed as a JavaScript module, and can be freely reused in any tool that supports imports. This is the case with Webflow. The setup is straightforward, and is explained below.
+
+## Obtaining the import URL of your Motif page
+
+When you open a page's Share menu, you will see a JavaScript import URL under the "API" tab. Copy that to the clipboard. Only public pages are accessible.
+
+<img
+  alt="Share menu"
+  className="w-full max-w-[400px] border rounded-lg mx-auto"
+  src="https://res.cloudinary.com/djp21wtxm/image/upload/v1660635928/i1600x876-2PRMTp__uJzE_ommrhs.png"
+/>
+
+## Importing page content into Webflow
+
+Now, head over to Webflow and do the following:
+
+- Create a new div block on your page that will be the container of your Motif content
+- Give it an id. Here, we will use `content`, but anything can be used.
+- Head over to your page settings, and scroll down to the Custom Code section.
+- In the "Before `<body />` tag" field, enter the following, replacing `<MOTIF_MODULE_URL>` with the module URL that you obtained in the previous section:
+
+```html
+<script type="module">
+  import React from "https://cdn.skypack.dev/react";
+  import ReactDOM from "https://cdn.skypack.dev/react-dom";
+  import Page from "<MOTIF_MODULE_URL>"
+
+  ReactDOM.render(
+    React.createElement(Page, {}, null),
+    document.getElementById('content')
+  )
+</script>
+```
+
+Your Motif content will now show up on your Webflow website.
+
+## Importing components and data into Webflow
+
+In addition to exposing your page as a JavaScript module, Motif also exposes any component or object within your page. For instance, this could be a navigation bar React component, or some page data. These components and objects can be imported into Webflow in the same way, except that your tell specifically which one to use in your import statement. For instance, say your Motif page defined a component named "Navbar", and an object named "data":
+
+```jsx
+export const Navbar = () => {
+  /* */
+}
+export const data = { title: "..." }
+```
+
+These items can be imported in Webflow, with or without the entire page. For instance, here we import the page, as well as the `Nvabar` component and `data` object:
+
+```html
+<script type="module">
+  // ...
+  import Page, { Navbar, data } from "<MOTIF_MODULE_URL>"
+
+  console.log("Data:", JSON.stringify(data))
+  // ...
+</script>
+```
+
+In this way, you can use Motif as your single source of truth for data, components and content, and use it across all your web assets.
+
+</TwoOfThreeCols>

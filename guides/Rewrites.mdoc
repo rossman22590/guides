@@ -1,0 +1,63 @@
+---
+index: 8
+title: Point your Next.js paths to a Motif project
+description: Want yourdomain.com/docs to point to pages on Motif? In this guide, we show how it's possible in a Next.js application, using rewrites.
+date: "2022-09-22"
+---
+
+{% twocols %}
+
+[Next.js rewrites](https://nextjs.org/docs/api-reference/next.config.js/rewrites) enable you to route an incoming request to your Next.js application to a different destination. This destination can be a Motif project. In this way, you can keep your existing path structure, while using Motif for authoring and serving the content:
+
+{% div className="text-center flex flex-col gap-1" %}
+{% div %}[acme.com/docs/welcome](https://acme.com/docs){% /div %}
+{% div %}↓{% /div %}
+{% div %}[acme-docs.motif.land/welcome](https://acme-docs.motif.land/){% /div %}
+{% /div %}
+
+## Step 1: Create a project on Motif
+
+Head over to [Motif](https://motif.land) and create a project. Your project automatically gets an auto-generated subdomain on motif.land, such as `violet-flower-universe.motif.land`. In your [project settings](/project/settings), you can optionally change that to a more suitable name, such as `acme-docs.motif.land`, or to a custom domain (but this is not required). Make your pages public, open the **Share** menu, and hit **Publish site**.
+
+## Step 2: Set up Next.js rewrites
+
+In your existing Next.js project, open `next.config.js` and setup a rewrite rule, for instance:
+
+```js
+module.exports = {
+  async rewrites() {
+    return [
+      {
+        source: '/docs/:path*',
+        destination: 'https://acme-docs.motif.land/:path*',
+      },
+    ]
+  },
+}
+```
+
+where `acme-docs.motif.land` is the domain associated with your Motif project. Deploy the new version of your Next.js app.
+
+## Step 2 (alternative): Set up middleware rewrites
+
+Since Next.js 12.2, rewrites can also be defined in [Next.js middleware](https://nextjs.org/docs/advanced-features/middleware). Create a file named `middleware.ts` at the root of your project, and add the following:
+
+```ts
+import type { NextFetchEvent, NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
+
+export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
+  const { pathname } = req.nextUrl
+  if (pathname.startsWith("/docs")) {
+    const rest = pathname.replace(/^\/docs/, '')
+    return NextResponse.rewrite('https://acme-docs.motif.land/' + rest)
+  }
+  return NextResponse.next()
+}
+```
+
+---
+
+That's it! Whenever someone visits `acme.com/docs/a/page/path`, they will be served the corresponding page from Motif at `acme-docs.motif.land/a/page/path`.
+
+{% /twocols %}

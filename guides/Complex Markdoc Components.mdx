@@ -1,0 +1,113 @@
+---
+index: 12
+title: Markdoc components with non-primitive attributes
+description: This guide will show you a way around passing non-primitive attributes to components in Markdoc.
+date: "2023-01-19"
+---
+
+import { TwoOfThreeCols } from "@components/ui/gridcolspans"
+
+<TwoOfThreeCols>
+Markdoc is great for writing structured content, where your page would typically consist of Markdown content, and some predefined components. *Predefined*, because Markdoc requires you to list all the components and their attributes in a schema, before using them with their custom `{% %}` syntax. This is great when your components are essentially static, or at most parametrized in a simple way, using for instance strings and numbers:
+</TwoOfThreeCols>
+
+```
+{% note type="info" %}An informational note{% /note %}
+```
+
+<TwoOfThreeCols>
+But what if we wanted our component to include some content that cannot be represented with simple types? Say, we want a note component to include a custom icon, represented as a React component? In MDX, there is a natural way to do this, because MDX understands React/JSX and module imports in the page itself. Markdoc also understands React/JSX, but it requires an extra step, which we will describe here.
+
+In MDX, our note component with a custom icon could be created on the fly as follows:
+</TwoOfThreeCols>
+
+```jsx
+import { Note } from "@components/ui/note"
+import { Warning } from "@components/icons"
+
+<Note type="info" icon={WarningIcon}>
+  An informational note
+</Note>
+```
+
+<TwoOfThreeCols>
+In Markdoc, there is currently no way to set a custom Markdoc component, let alone a JSX component, as an attribute to another component. Instead, we need to use a set of predefined primitive values that we want to support for our icons (e.g. `questionMark`, `exclamationMark`, `xMark`), and map these to the appropriate icons within our JSX definition.
+
+Our Note component could be written like this:
+</TwoOfThreeCols>
+
+```jsx
+// /components/ui/note.jsx
+import { useMemo } from "react"
+import { QuestionMark, ExclamationMark, XMark } from "@components/icons"
+
+const getIconForId = (iconId) => {
+  switch (iconId) {
+    case "exclamationMark": return <ExclamationMark className="w-4 h-4 text-amber-500" />
+    case "xMark": return <XMark className="w-4 h-4 text-rose-500" />
+    default: return <QuestionMark className="w-4 h-4 text-sky-500" />
+  }
+}
+
+export const Note = ({ type, iconId, children }) => {
+  const Icon = useMemo(() => {
+    return getIconForId(iconId)
+  }, [iconId])
+
+  return <div className="flex flex-row gap-2">
+      {Icon}
+      {children}
+    </div>
+}
+```
+
+<TwoOfThreeCols>
+
+In order to use it, we need to define our Note component in our Markdoc schema, which is located in `/markdoc.config.js`:
+
+</TwoOfThreeCols>
+
+
+```js
+const config = {
+  tags: {
+    note: {
+      render: 'Note',
+      children: ['paragraph', 'tag', 'list'],
+      attributes: {
+        type: {
+          type: String,
+          default: 'info',
+          matches: ['info', 'warning', 'danger'],
+        },
+        iconId: {
+          type: String,
+          default: 'questionMark',
+          matches: ['questionMark', 'exclamationMark', 'xMark'],
+        },
+      },
+    }
+  }
+}
+```
+
+<TwoOfThreeCols>
+
+If you haven't already, we also need to tell what the `Note` component refers to, in `/markdoc.components.js`:
+
+```js
+import { Note } from '@components/ui/note'
+
+export default {
+  Note,
+  // Other components accessible to Markdoc
+}
+```
+
+Now, we can use our Note component with an icon reference in our Markdoc pages, as follows:
+
+</TwoOfThreeCols>
+
+```
+{% note type="info" iconId="questionMark" %}My informational note{% /note %}
+```
